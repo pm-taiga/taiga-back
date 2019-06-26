@@ -177,16 +177,17 @@ class UserStoryViewSet(AssignedUsersSignalMixin, OCCResourceMixin,
 
         if obj.kanban_order == -1:
             if self._max_order:
-                obj.kanban_order = self._max_order + 1;
+                obj.kanban_order = self._max_order + 1
 
         if not obj.id:
             obj.owner = self.request.user
-        else:
-            self._old_backlog_order_key = self._backlog_order_key(self.object)
-            self._old_kanban_order_key = self._kanban_order_key(self.object)
-            self._old_sprint_order_key = self._sprint_order_key(self.object)
 
         super().pre_save(obj)
+
+    def pre_validate(self):
+        self._old_backlog_order_key = self._backlog_order_key(self.object)
+        self._old_kanban_order_key = self._kanban_order_key(self.object)
+        self._old_sprint_order_key = self._sprint_order_key(self.object)
 
     def _reorder_if_needed(self, obj, old_order_key, order_key, order_attr,
                            project, status=None, milestone=None):
@@ -334,6 +335,7 @@ class UserStoryViewSet(AssignedUsersSignalMixin, OCCResourceMixin,
             "epics": self.filter_queryset(queryset, filter_backends=epics_filter_backends),
             "roles": self.filter_queryset(queryset, filter_backends=roles_filter_backends)
         }
+
         return response.Ok(services.get_userstories_filters_data(project, querysets))
 
     @list_route(methods=["GET"])

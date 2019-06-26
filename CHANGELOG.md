@@ -2,7 +2,22 @@
 
 ## Unreleased
 
-## 4.2.4 (2019-05-09)
+## 4.2.7 (2019-06-24)
+
+### Misc
+
+- Add default settings slug configuration.
+- Minor bug fixes.
+
+## 4.2.6 (2019-06-12)
+
+### Misc
+
+- Recreate timeline indexes.
+- Minor bug fixes.
+
+
+## 4.2.4 / 4.2.5 (2019-05-09)
 
 ### Misc
 

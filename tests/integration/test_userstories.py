@@ -762,18 +762,20 @@ def test_api_filter_by_finish_date(client):
 def test_api_filter_by_assigned_users(client):
     user = f.UserFactory(is_superuser=True)
     user2 = f.UserFactory(is_superuser=True)
+    project = f.ProjectFactory.create(owner=user)
 
-    userstory = f.create_userstory(owner=user, subject="test 2 users",
-                                   assigned_to=user,
-                                   assigned_users=[user.id, user2.id])
+    f.MembershipFactory.create(user=user, project=project)
+
+    f.create_userstory(owner=user, subject="test 2 users", assigned_to=user,
+                       assigned_users=[user.id, user2.id], project=project)
     f.create_userstory(
         owner=user, subject="test 1 user", assigned_to=user,
-        assigned_users=[user.id]
+        assigned_users=[user.id], project=project
     )
 
     url = reverse("userstories-list") + "?assigned_users=%s" % (user.id)
 
-    client.login(userstory.owner)
+    client.login(user)
     response = client.get(url)
     number_of_userstories = len(response.data)
 
@@ -1424,3 +1426,42 @@ def test_api_validator_assigned_to_when_create_userstories(client):
 
         response = client.json.post(url, json.dumps(data))
         assert response.status_code == 400, response.data
+
+
+def test_update_userstory_backlog_order(client):
+    user1 = f.UserFactory.create()
+    project = f.create_project(owner=user1)
+    f.MembershipFactory.create(project=project, user=project.owner, is_admin=True)
+    us1 = f.create_userstory(project=project, owner=user1, status__project=project, milestone=None, backlog_order=0)
+    us2 = f.create_userstory(project=project, owner=user1, status__project=project, milestone=None, backlog_order=1)
+    us3 = f.create_userstory(project=project, owner=user1, status__project=project, milestone=None, backlog_order=2)
+    us4 = f.create_userstory(project=project, owner=user1, status__project=project, milestone=None, backlog_order=3)
+    url = reverse("userstories-detail", args=[us4.pk])
+
+    data = {
+        "version": us4.version,
+        "backlog_order": 1
+    }
+
+    client.login(project.owner)
+
+    response = client.json.patch(url, json.dumps(data))
+    assert response.status_code == 200, response.data
+    assert 1 == response.data['backlog_order']
+
+    url = reverse("userstories-list") + "?milestone=null&project={}".format(project.id)
+    client.login(project.owner)
+    response = client.get(url)
+    user_stories = response.data
+    number_of_stories = len(user_stories)
+
+    assert response.status_code == 200
+    assert number_of_stories == 4, number_of_stories
+    assert 0 == user_stories[0]["backlog_order"]
+    assert us1.id == user_stories[0]["id"]
+    assert us4.id == user_stories[1]["id"]
+    assert 1 == user_stories[1]["backlog_order"]
+    assert us2.id == user_stories[2]["id"]
+    assert 2 == user_stories[2]["backlog_order"]
+    assert us3.id == user_stories[3]["id"]
+    assert 3 == user_stories[3]["backlog_order"]
